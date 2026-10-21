@@ -1,6 +1,6 @@
 @echo off
 setlocal
-title Compre - Iniciar projeto
+title Compre - Homologacao local
 cd /d "%~dp0"
 
 rem ===== Configuracao =====
@@ -10,7 +10,7 @@ rem Usuario SSH da VPS (deixe vazio para ser perguntado)
 set SSH_USER=
 
 echo ============================================
-echo   COMPRE - ambiente de desenvolvimento
+echo   COMPRE - homologacao local
 echo ============================================
 echo.
 
@@ -35,16 +35,19 @@ if not exist "backend\.env" (
     exit /b 0
 )
 
-rem ----- Seguranca: so roda contra a base de desenvolvimento -----
-findstr /R /C:"^DB_NAME=compre_dev" "backend\.env" >nul
-if errorlevel 1 (
+rem ----- Seguranca: nunca roda contra a base de PRODUCAO (compre) -----
+set DB_OK=
+findstr /R /C:"^DB_NAME=compre_hml" "backend\.env" >nul && set DB_OK=1
+findstr /R /C:"^DB_NAME=compre_dev" "backend\.env" >nul && set DB_OK=1
+if not defined DB_OK (
     echo.
-    echo PARADO: DB_NAME no backend\.env nao e compre_dev.
-    echo Este script aplica migrations automaticamente e nao deve tocar em compre_hml nem compre.
+    echo PARADO: DB_NAME no backend\.env deve ser compre_hml ^(homologacao^) ou compre_dev.
+    echo Este script aplica migrations automaticamente e nao deve tocar na base de producao ^(compre^).
     pause
     exit /b 1
 )
-echo [2/5] Configuracao do backend OK ^(base compre_dev^).
+for /f "tokens=2 delims== " %%A in ('findstr /R /C:"^DB_NAME=" "backend\.env"') do set BASE_ATUAL=%%A
+echo [2/5] Configuracao do backend OK ^(base %BASE_ATUAL%^).
 
 rem ----- Frontend: dependencias -----
 if not exist "frontend\node_modules" (
